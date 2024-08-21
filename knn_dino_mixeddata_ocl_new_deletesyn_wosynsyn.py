@@ -185,7 +185,6 @@ TEST_DATA_DESTINATION_FOLDER = 'saved_data/cifar_test100'
 def parse_args():
     parser = argparse.ArgumentParser(description="Run CIFAR100 benchmark with different configurations")
     parser.add_argument('--cuda_device', type=int, default=0, help='CUDA device index')
-    parser.add_argument('--knn_k', type=int, default=5, help='k-nearest neighbour')
     parser.add_argument('--log_file', type=str, default='logs/test.txt', help='File for logging')
     parser.add_argument('--syn_index', type=int, default=3, help='the starting index of synthetic class within each experience')
     parser.add_argument('--filter1', type=str, default='/storage3/enbo/saved_data/sdxl_llava_i2i_allimage10percentprompt_60real', help='File 1 for filter')
@@ -237,7 +236,8 @@ def prepare_class_dictionaries(order_list, name_list, syn_index):
     label_list_sep = [item for sublist in label_list for item in sublist]
     real_list = set(range(100)) - set(label_list_sep)
     
-    syn_dict = {class_number: integer_to_name[class_number] for class_number in label_list_sep}
+#     syn_dict = {class_number: integer_to_name[class_number] for class_number in label_list_sep}
+    syn_dict = {}
     real_dict = {class_number: integer_to_name[class_number] for class_number in real_list}
     return real_dict, syn_dict
     
@@ -271,7 +271,7 @@ def prepare_evaluation_plugin(loggers):
 
 
 
-def prepare_strategy(eval_plugin, knn_k):
+def prepare_strategy(eval_plugin):
     RNGManager.set_random_seeds(1234)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     checkpoint_plugin = CheckpointPlugin(
@@ -297,8 +297,7 @@ def prepare_strategy(eval_plugin, knn_k):
         eval_mb_size=512,
         device=device,
         evaluator=eval_plugin,
-        plugins=[replay_plugin],
-        k = knn_k
+        plugins=[replay_plugin]
     )
     return cl_strategy
 
@@ -384,7 +383,7 @@ def main1():
 
     loggers = prepare_loggers(args.log_file)
     eval_plugin = prepare_evaluation_plugin(loggers)
-    cl_strategy = prepare_strategy(eval_plugin, args.knn_k)
+    cl_strategy = prepare_strategy(eval_plugin)
 
     # Training
     print('Starting experiment...')

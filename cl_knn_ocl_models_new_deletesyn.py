@@ -244,8 +244,10 @@ class KNN_storagePlugin_update(SupervisedPlugin):
         
     def after_eval_exp(self, strategy: "SupervisedTemplate", **kwargs):
         print(strategy.experience.classes_in_this_experience, strategy.current_exp)
-        if set(strategy.experience.classes_in_this_experience) == set(strategy.current_exp):
-#         if have_more_than_n_in_common(strategy.experience.classes_in_this_experience, strategy.current_exp, 3):
+#         if set(strategy.experience.classes_in_this_experience) == set(strategy.current_exp):
+#         if have_more_than_n_in_common(self.experience.classes_in_this_experience, self.current_exp, 3):
+
+        if have_more_than_n_in_common(strategy.experience.classes_in_this_experience, strategy.current_exp, 3):
             self.storage_policy.update_newseen(strategy, **kwargs)
     
 #     def after_eval(self, strategy: "SupervisedTemplate", indices, **kwargs):
@@ -957,11 +959,12 @@ class KNN_DINO_update_ocl_deleteold(BaseTemplate):
         
 #         current_classes = self.experience.classes_in_this_experience
         print('----------current_classes----------', self.current_exp)
-        if self.current_exp == self.experience.classes_in_this_experience:
+#         if self.current_exp == self.experience.classes_in_this_experience:
+        if have_more_than_n_in_common(self.experience.classes_in_this_experience, self.current_exp, 3):
 #             self.new_seen_dataset = self.experience.dataset
  
 #             after_filtered_train_features, after_filtered_train_labels = filter_and_delete(train_features, train_labels, self.current_exp)
-            matched_test_features, matched_test_labels = extract_and_concatenate(test_features_all, test_labels_all, self.current_exp)
+            matched_test_features, matched_test_labels = extract_and_concatenate(test_features_all, test_labels_all, self.experience.classes_in_this_experience)
 
 
 
