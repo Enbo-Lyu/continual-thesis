@@ -816,7 +816,7 @@ class KNN_DINO_update(BaseTemplate):
         print('eval_dataset_adaptation')
         self.adapted_dataset = self.experience.dataset
         self.adapted_dataset = self.adapted_dataset.eval()
-        print(len(self.adapted_dataset))
+#         print(len(self.adapted_dataset))
 
     def make_eval_dataloader(
         self, num_workers=0, pin_memory=True, persistent_workers=False, **kwargs
