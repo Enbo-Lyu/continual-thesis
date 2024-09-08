@@ -169,7 +169,7 @@ import argparse
 
 from knn_dino_utils import *
 from dino_models import *
-from cl_knn_models import *
+from cl_knn_ocl_models_new_deletesyn import *
 
 ################################################################################################
 
@@ -208,7 +208,7 @@ def setup_device(cuda_device):
 
 def prepare_data_transform():
     return transforms.Compose([
-        transforms.Resize(196),
+        transforms.Resize((196, 196)),
         transforms.ToTensor(),
     ])
 
@@ -283,14 +283,14 @@ def prepare_strategy(eval_plugin, knn_k):
     
     strategy, initial_exp = checkpoint_plugin.load_checkpoint_if_exists()
     storage_p = Custom_ParametricBuffer(
-        max_size=60000,
+        max_size=270000,
         groupby='class',
         selection_strategy=RandomExemplarsSelectionStrategy()
     )
-    replay_plugin = KNN_storagePlugin_update(mem_size=60000, storage_policy=storage_p)
+    replay_plugin = KNN_storagePlugin_update(mem_size=270000, storage_policy=storage_p)
     dino_model = DINOFeatureExtractor_v2()
 
-    cl_strategy = KNN_DINO_update(
+    cl_strategy = KNN_DINO_update_ocl_deleteold(
         model=dino_model,
         train_mb_size=512,
         train_epochs=1,
@@ -318,7 +318,7 @@ def main():
     test_experience_list = generate_experience_lists(order_list, TEST_DATA_DESTINATION_FOLDER)
     
     transform_train = transform_test = transforms.Compose([
-        transforms.Resize(196),
+        transforms.Resize((196, 196)),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5071, 0.4866, 0.4410], std=[0.1941, 0.1917, 0.1957])
     ])
@@ -368,7 +368,7 @@ def main1():
     test_experience_list = generate_experience_lists(order_list, args.test_destination)
     
     transform_train = transform_test = transforms.Compose([
-        transforms.Resize(196),
+        transforms.Resize((196, 196)),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5071, 0.4866, 0.4410], std=[0.1941, 0.1917, 0.1957])
     ])

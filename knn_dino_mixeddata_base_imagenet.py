@@ -185,7 +185,6 @@ TEST_DATA_DESTINATION_FOLDER = 'saved_data/cifar_test100'
 def parse_args():
     parser = argparse.ArgumentParser(description="Run CIFAR100 benchmark with different configurations")
     parser.add_argument('--cuda_device', type=int, default=0, help='CUDA device index')
-    parser.add_argument('--knn_k', type=int, default=5, help='k-nearest neighbour')
     parser.add_argument('--log_file', type=str, default='logs/test.txt', help='File for logging')
     parser.add_argument('--syn_index', type=int, default=3, help='the starting index of synthetic class within each experience')
     parser.add_argument('--filter1', type=str, default='/storage3/enbo/saved_data/sdxl_llava_i2i_allimage10percentprompt_60real', help='File 1 for filter')
@@ -208,7 +207,7 @@ def setup_device(cuda_device):
 
 def prepare_data_transform():
     return transforms.Compose([
-        transforms.Resize(196),
+        transforms.Resize((196, 196)),
         transforms.ToTensor(),
     ])
 
@@ -271,7 +270,7 @@ def prepare_evaluation_plugin(loggers):
 
 
 
-def prepare_strategy(eval_plugin, knn_k):
+def prepare_strategy(eval_plugin):
     RNGManager.set_random_seeds(1234)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     checkpoint_plugin = CheckpointPlugin(
@@ -283,11 +282,11 @@ def prepare_strategy(eval_plugin, knn_k):
     
     strategy, initial_exp = checkpoint_plugin.load_checkpoint_if_exists()
     storage_p = Custom_ParametricBuffer(
-        max_size=60000,
+        max_size=130000,
         groupby='class',
         selection_strategy=RandomExemplarsSelectionStrategy()
     )
-    replay_plugin = KNN_storagePlugin_update(mem_size=60000, storage_policy=storage_p)
+    replay_plugin = KNN_storagePlugin_update(mem_size=130000, storage_policy=storage_p)
     dino_model = DINOFeatureExtractor_v2()
 
     cl_strategy = KNN_DINO_update(
@@ -297,8 +296,7 @@ def prepare_strategy(eval_plugin, knn_k):
         eval_mb_size=512,
         device=device,
         evaluator=eval_plugin,
-        plugins=[replay_plugin],
-        k = knn_k
+        plugins=[replay_plugin]
     )
     return cl_strategy
 
@@ -318,7 +316,7 @@ def main():
     test_experience_list = generate_experience_lists(order_list, TEST_DATA_DESTINATION_FOLDER)
     
     transform_train = transform_test = transforms.Compose([
-        transforms.Resize(196),
+        transforms.Resize((196, 196)),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5071, 0.4866, 0.4410], std=[0.1941, 0.1917, 0.1957])
     ])
@@ -368,7 +366,7 @@ def main1():
     test_experience_list = generate_experience_lists(order_list, args.test_destination)
     
     transform_train = transform_test = transforms.Compose([
-        transforms.Resize(196),
+        transforms.Resize((196, 196)),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5071, 0.4866, 0.4410], std=[0.1941, 0.1917, 0.1957])
     ])
@@ -384,7 +382,7 @@ def main1():
 
     loggers = prepare_loggers(args.log_file)
     eval_plugin = prepare_evaluation_plugin(loggers)
-    cl_strategy = prepare_strategy(eval_plugin, args.knn_k)
+    cl_strategy = prepare_strategy(eval_plugin)
 
     # Training
     print('Starting experiment...')
