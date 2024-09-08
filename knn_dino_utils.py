@@ -162,6 +162,12 @@ from avalanche.training.plugins import ReplayPlugin
 import shutil
 
 from types import SimpleNamespace
+
+import torch
+import random
+from torch.utils.data import DataLoader
+from torch.utils.data.sampler import RandomSampler
+from typing import Optional, Sized, Iterator
 # Custom imports
 
 from dino_models import *
@@ -325,3 +331,69 @@ def shuffle_text_file_lines(file_path):
     # Write the shuffled lines back to the file
     with open(file_path, 'w') as file:
         file.writelines(lines)
+
+def filter_and_delete(feature_tensor, label_tensor, list_labels_to_remove):
+    labels_to_remove_tensor = torch.tensor(list_labels_to_remove)
+    mask = ~torch.any(labels[:, None] == labels_to_remove_tensor, dim=1)
+    filtered_features = feature_tensor[mask]
+    filtered_labels = label_tensor[mask]
+    return filtered_features, filtered_labels
+
+
+def extract_and_concatenate(feature_tensor, label_tensor, list_labels_to_keep):
+    labels_to_keep_tensor = torch.tensor(list_labels_to_keep)
+    mask = torch.any(label_tensor[:, None] == labels_to_keep_tensor, dim=1)
+
+    # Apply mask to features and labels to filter them
+    matching_features = feature_tensor[mask]
+    matching_labels = label_tensor[mask]
+
+    return matching_features, matching_labels
+
+
+
+class MyRandomSampler(RandomSampler):
+    r"""Sample elements randomly. 
+    Not everything from RandomSampler is implemented.
+
+    Args:
+        data_source (Dataset): dataset to sample from
+        forbidden  (Optional[list]): list of forbidden numbers
+    """
+    data_source: Sized
+    forbidden: Optional[list]
+
+    def __init__(self, data_source: Sized, forbidden: Optional[list] = []) -> None:
+        super().__init__(data_source)
+        self.data_source = data_source
+        self.forbidden = forbidden
+        self.refill()
+
+    def remove(self, new_forbidden):
+        # Remove numbers from the available indices
+        for num in new_forbidden:
+            if not (num in self.forbidden):
+                self.forbidden.append(num)
+        self._remove(new_forbidden)
+
+    def _remove(self, to_remove):
+        # Remove numbers just for this epoch
+        for num in to_remove:
+            if num in self.idx:
+                self.idx.remove(num)
+
+        self._num_samples = len(self.idx)
+
+    def refill(self):
+        # Refill the indices after iterating through the entire DataLoader
+        self.idx = list(range(len(self.data_source)))
+        self._remove(self.forbidden)
+
+    def __iter__(self) -> Iterator[int]:
+        for _ in range(self.num_samples // 32):
+            batch = random.sample(self.idx, 32)
+            self._remove(batch)
+            yield from batch
+        yield from random.sample(self.idx, self.num_samples % 32)
+        self.refill()
+
